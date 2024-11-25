@@ -1,3 +1,7 @@
 test/
 main
+mole
+*.o
+*.exe
 *.zip
+*.pdf
