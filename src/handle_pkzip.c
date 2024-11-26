@@ -20,116 +20,97 @@
 #include <stdint.h>
 #include <string.h>
 
-// the first occurence of LCFH before an EOCD
-static MoleBuffer first_lcfh = {
-    .length = 0,
-    .ptr = NULL
-};
+// the first occurrence of LCFH before an EOCD
+// .ptr points to the first byte ('P') of 'PK\0\4'
+// and the length is calculated upon reaching an EOCD
+static char *lcfh_start = NULL;
 
-void MoleHandlePKZIP_EOCD(MoleFileMem *file, MoleBuffer *chunk)
+// void MoleHandlePKZIP_EOCD(MoleFileMem *file, MoleBuffer *chunk)
+size_t MoleHandlePKZIP_EOCD(MoleSlice *file, size_t start_index)
 {
+    char *ptr = file->ptr + start_index;
     uint64_t zip_start_off = 0,
-             zip_length = 0;
+             zip_length = 0,
+             eocd_length = 0;
 
-    // Offset of start of central directory,
-    // relative to start of archive (or 0xffffffff for ZIP64)
-    uint32_t central_start_length = MoleReadU32LE(chunk->ptr + 12);
-
-    // Offset of start of central directory,
-    // relative to start of archive (or 0xffffffff for ZIP64)
-    uint32_t central_start_offset = MoleReadU32LE(chunk->ptr + 16);
-
-    // Comment length (n)
-    uint16_t comment_length = MoleReadU16LE(chunk->ptr + 20);
-
-    chunk->length += 22 + comment_length;
+    eocd_length = 22 + MoleReadU16LE(ptr + 20); // 22 + comment length
 
     printf(
-        "MoleHandlePKZIP_EOCD(%p [offset=%ld]):\n"
-        "\tcentral_start_offset= %u\n"
-        "\tcentral_start_length= %u\n"
-        "\tcomment_length= %u\n"
-        "\tchunk->length= %zu\n"
+        "MoleHandlePKZIP_EOCD(%p [offset=%llu]):\n"
+        "\teocd_length= %llu\n"
         ,
-        (void*)chunk->ptr,
-        chunk->ptr-file->ptr,
-        central_start_offset,
-        central_start_length,
-        comment_length,
-        chunk->length
+        (void*)ptr, start_index,
+        eocd_length
     );
 
-    if (first_lcfh.ptr == NULL) {
+    if (lcfh_start == NULL) {
         puts("No previous LCFH, Probably an empty archive. ignoring...\n\n");
-        return;
+        return eocd_length;
     }
 
-    zip_start_off = (uint64_t)(first_lcfh.ptr - file->ptr);
-    zip_length = (uint64_t)(chunk->ptr - first_lcfh.ptr + chunk->length);
+    zip_start_off = (uint64_t)(lcfh_start - file->ptr);
+    zip_length = (uint64_t)(zip_start_off + start_index + eocd_length + 1);
 
     printf(
-        "PKZip (size= %lu, start= %lu, end= %lu)\n",
+        "PKZip (size= %llu, start= %llu, end= %llu)\n",
         zip_length,
         zip_start_off,
         zip_start_off + zip_length - 1
     );
 
-    // TODO: write the file to disk
-    // TODO: improve
     char fname[16];
     memset(fname, 0, sizeof(fname));
     sprintf(
-        fname, "0x%lx-0x%lx.zip",
+        fname, "0x%llx-0x%llx.zip",
         zip_start_off,
         zip_start_off + zip_length - 1
     );
     puts("Writing file to disk...\n");
+#ifdef __WIN32
+    WriteFile(
+        CreateFile(fname, GENERIC_WRITE, 0, NULL, 2, 0, 0),
+        lcfh_start, zip_length, NULL, NULL
+    );
+#else
     fwrite(
-        file->ptr + zip_start_off,
+        lcfh_start,
         1, zip_length,
         fopen(fname, "w")
     );
+#endif
 
     // reset the starting LCFH
-    first_lcfh.length = 0;
-    first_lcfh.ptr = NULL;
+    lcfh_start = NULL;
+    return eocd_length;
 }
 
-void MoleHandlePKZIP_LCFH(MoleFileMem *file, MoleBuffer *chunk)
+size_t MoleHandlePKZIP_LCFH(MoleSlice *file, size_t start_index)
 {
-    uint32_t comp_size     = MoleReadU32LE(chunk->ptr + 18);
-    uint32_t uncomp_size   = MoleReadU32LE(chunk->ptr + 22);
-    uint16_t file_name_len = MoleReadU16LE(chunk->ptr + 26);
-    uint16_t extra_fld_len = MoleReadU16LE(chunk->ptr + 28);
+    char *ptr = file->ptr + start_index;
 
-    chunk->length = 30 + file_name_len + extra_fld_len + comp_size;
+    uint64_t lcfh_length = MoleReadU32LE(ptr + 18) // compressed data size
+                        +  MoleReadU16LE(ptr + 26) // file name length
+                        +  MoleReadU16LE(ptr + 28) // extra field length
+                        +  30; // the fields size up to file_name
 
     printf(
-        "MoleHandlePKZIP_LCFH(%p [offset=%ld]):\n"
-        "\tcomp_size= %u\n"
-        "\tuncomp_size= %u\n"
-        "\tfile_name_len= %u\n"
-        "\textra_fld_len= %u\n"
-        "\tchunk->length= %zu\n\n"
+        "MoleHandlePKZIP_LCFH(%p [offset=%llu]):\n"
+        "\tlcfh_length= %llu\n\n"
         ,
-        (void*)chunk->ptr,
-        chunk->ptr-file->ptr,
-        comp_size,
-        uncomp_size,
-        file_name_len,
-        extra_fld_len,
-        chunk->length
+        (void*)ptr, start_index,
+        lcfh_length
     );
 
     // not the first LCFH in the archive
-    if (first_lcfh.ptr != NULL)
-        return;
+    if (lcfh_start != NULL)
+        return lcfh_length;
 
-    first_lcfh.ptr = chunk->ptr;
-    first_lcfh.length = chunk->length;
+    lcfh_start = ptr;
 
     printf(
-        "PKZip Start (start= %lu)\n",
-        first_lcfh.ptr - file->ptr
+        "PKZip Start (start= %lld)\n",
+        lcfh_start - file->ptr
     );
+
+    return lcfh_length;
 }

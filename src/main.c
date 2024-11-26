@@ -3,8 +3,8 @@
 #include <stdio.h>
 
 static const MoleMagicHandler handlers[] = {
-    // {.magic = {80,75,3,4,0,0,0,0},    .handle = MoleHandlePKZIP_LCFH},
-    // {.magic = {80,75,5,6,0,0,0,0},    .handle = MoleHandlePKZIP_EOCD},
+    {.magic = {80,75,3,4,0,0,0,0},    .handle = MoleHandlePKZIP_LCFH},
+    {.magic = {80,75,5,6,0,0,0,0},    .handle = MoleHandlePKZIP_EOCD},
     {.magic = {37,80,68,70,45,0,0,0}, .handle = MoleHandlePDF_Header},
     {.magic = {37,37,69,79,70,0,0,0}, .handle = MoleHandlePDF_Footer},
 };
@@ -37,8 +37,9 @@ int main(int argc, char **argv)
                     goto no_match_for_magic;
                 c++;
             }
-            printf("\tMATCH b=%llu, c= %d\n", b, c);
+            printf("MATCH b=%llu, h= %d\n", b, h);
             b += handlers[h].handle(&file.buffer, b);
+            printf("b= %llu\n", b);
 no_match_for_magic:;
         }
     }

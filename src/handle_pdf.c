@@ -1,81 +1,100 @@
 // C99
 #include "mole.h"
 
-#include <bits/stdint-uintn.h>
+#include <fileapi.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <windows.h>
+#include <winnt.h>
 
-// the first occurence of %PDF-
-static MoleBuffer current_pdf = {
-    .length = 0,
-    .ptr = NULL
-};
+// the current occurrence of %PDF-
+// ptr points to '%' of the '%PDF-'
+// and length is calculated when reaching a '%EOF'
+static char *pdf_header = NULL;
 
-void MoleHandlePDF_Header(MoleFileMem *file, MoleBuffer *chunk)
+size_t MoleHandlePDF_Header(MoleSlice *file, size_t start_index)
 {
     // %PDF-1.5
     // ^    ^ ^
     // 0    5 7
-    char pdf_ver_major = chunk->ptr[5] - '0',
-         pdf_ver_minor = chunk->ptr[7] - '0';
+    char pdf_ver_major = file->ptr[start_index + 5] - '0',
+         pdf_ver_minor = file->ptr[start_index + 7] - '0';
 
     printf(
-        "PDF %d.%d (offset= %ld)\n",
+        "PDF %d.%d (offset= %llu)\n",
         pdf_ver_major, pdf_ver_minor,
-        chunk->ptr - file->ptr
+        start_index
     );
 
-    if (current_pdf.ptr != NULL) {
-        puts(
+    if (pdf_header != NULL) {
+        fputs(
             "[!] pdf header found before previous one's eof. "
             "possibly corrupted file. "
-            "ignoring header...\n"
+            "ignoring header...\n",
+            stderr
         );
-        return;
+        return 0;
     }
 
-    current_pdf.ptr = chunk->ptr;
+    pdf_header = file->ptr + start_index;
+    return 8;
 }
 
-void MoleHandlePDF_Footer(MoleFileMem *file, MoleBuffer *chunk)
+size_t MoleHandlePDF_Footer(MoleSlice *file, size_t start_index)
 {
-    uint64_t pdf_start_off = 0;
-
-    if (current_pdf.ptr == NULL) {
-        puts(
-            "[!] pdf footer found with no preceding header! "
-            "possibly corrupted file. "
-            "ignoring footer...\n"
-        );
-        return;
-    }
-
-    current_pdf.length = chunk->ptr - file->ptr + chunk->length;
-    pdf_start_off = current_pdf.ptr - file->ptr;
+    size_t pdf_end = start_index + 5,
+           pdf_start = 0,
+           pdf_len = 0;
 
     printf(
-        "EOF (start= %ld, size= %ld)\n",
-        pdf_start_off,
-        current_pdf.length
+        "EOF (offset= %llu)\n",
+        start_index
     );
+
+    if (pdf_header == NULL) {
+        fputs(
+            "[!] pdf footer found before even starting. "
+            "possibly corrupted file. "
+            "ignoring header...\n",
+            stderr
+        );
+        return 0;
+    }
+
+    pdf_start = (pdf_header - file->ptr);
+    pdf_len = pdf_end - pdf_start;
 
     // TODO: improve saving and stuff
     char fname[16];
     memset(fname, 0, sizeof(fname));
     sprintf(
-        fname, "0x%lx-0x%lx.pdf",
-        pdf_start_off,
-        pdf_start_off + current_pdf.length
+        fname, "0x%llx-0x%llx.pdf",
+        pdf_start, pdf_end
     );
-    puts("Writing file to disk...\n");
-    fwrite(
-        current_pdf.ptr,
-        1, current_pdf.length,
-        fopen(fname, "w")
+    printf(
+        "Writing file to disk (start= %llu, end=%llu)...\n",
+        pdf_start, pdf_end
     );
 
-    current_pdf.length = 0;
-    current_pdf.ptr = NULL;
+#ifdef __WIN32
+    // ! apparently using cstdlib's fwrite with a windows memory-mapped buffer
+    // ! does not work as intended.
+    // ! this took so much of my time to figure out... i hate windows.
+    WriteFile(
+        CreateFile(fname, GENERIC_WRITE, 0, NULL, 2, 0, 0),
+        pdf_header, pdf_len, NULL, NULL
+    );
+#else
+    // TODO: use write and open?
+    fwrite(
+        pdf_header,
+        1, pdf_len,
+        fopen(fname, "w")
+    );
+#endif
+
+    pdf_header = NULL;
+    return 5;
 }

@@ -25,6 +25,8 @@ int MoleFileLoad(MoleFileStream *f, const char *const path)
     LARGE_INTEGER tmp;
 #endif
 
+    printf("MoleFileLoad(..., path=%s)\n", path);
+
     if (f == NULL || path == NULL) {
         fputs("[E] MoleFileLoad: NULL input is invalid.\n", stderr);
         return 1;
@@ -63,8 +65,6 @@ int MoleFileLoad(MoleFileStream *f, const char *const path)
         return 5;
     }
 #else
-    printf("MoleFileLoad(..., path=%s)\n", path);
-
     f->hFile = CreateFile(path,
         GENERIC_READ,          // dwDesiredAccess
         FILE_SHARE_READ,       // dwShareMode
