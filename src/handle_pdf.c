@@ -19,14 +19,22 @@ size_t MoleHandlePDF_Header(MoleSlice *file, size_t start_index)
     // %PDF-1.5
     // ^    ^ ^
     // 0    5 7
-    char pdf_ver_major = file->ptr[start_index + 5] - '0',
-         pdf_ver_minor = file->ptr[start_index + 7] - '0';
+    char pdf_ver_major = file->ptr[start_index + 5],
+         pdf_ver_minor = file->ptr[start_index + 7];
 
     printf(
-        "PDF %d.%d (offset= %llu)\n",
+        "PDF %c.%c (offset= %llu)\n",
         pdf_ver_major, pdf_ver_minor,
         start_index
     );
+
+    if (
+           (pdf_ver_major < '1' || pdf_ver_major > '2')
+        || (pdf_ver_minor < '0' || pdf_ver_minor > '9')
+    ) {
+        fputs("[!] invalid pdf version...\n", stderr);
+        return 0;
+    }
 
     if (pdf_header != NULL) {
         fputs(

@@ -25,27 +25,41 @@ int main(int argc, char **argv)
         file.buffer.length
     );
 
+    puts("press any key to read file.");
+    getchar();
+
     for(size_t b = 0; b < file.buffer.length; b++) {
         for(
             int h = 0;
             h < (sizeof(handlers)/sizeof(handlers[0]));
             h++
         ) {
-            int c = 0;
+            size_t c = 0;
             while(handlers[h].magic[c] != 0) {
                 if(handlers[h].magic[c] != file.buffer.ptr[b + c])
                     goto no_match_for_magic;
                 c++;
             }
             printf("MATCH b=%llu, h= %d\n", b, h);
-            b += handlers[h].handle(&file.buffer, b);
-            printf("b= %llu\n", b);
+            size_t skip_len = handlers[h].handle(&file.buffer, b);
+            printf("skip_len= %llu\n\n", skip_len);
+            b += skip_len-1;
+            if (b >= file.buffer.length) {
+                puts("[*] b >= file.buffer.length");
+                return 4;
+            }
 no_match_for_magic:;
         }
     }
 
+    puts("press any key to close file.");
+    getchar();
+
     if (MoleFileClose(&file))
         return 3;
+
+    puts("press any key to exit.");
+    getchar();
 
     return 0;
 }

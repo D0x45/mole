@@ -21,13 +21,18 @@
 #include <string.h>
 
 // the first occurrence of LCFH before an EOCD
-// .ptr points to the first byte ('P') of 'PK\0\4'
+// .ptr points to the first byte ('P') of 'PK\3\4'
 // and the length is calculated upon reaching an EOCD
 static char *lcfh_start = NULL;
 
 // void MoleHandlePKZIP_EOCD(MoleFileMem *file, MoleBuffer *chunk)
 size_t MoleHandlePKZIP_EOCD(MoleSlice *file, size_t start_index)
 {
+    if (start_index >= file->length) {
+        puts("start_index >= file->length");
+        return 7;
+    }
+
     char *ptr = file->ptr + start_index;
     uint64_t zip_start_off = 0,
              zip_length = 0,
@@ -86,20 +91,36 @@ size_t MoleHandlePKZIP_EOCD(MoleSlice *file, size_t start_index)
 
 size_t MoleHandlePKZIP_LCFH(MoleSlice *file, size_t start_index)
 {
+    if (start_index >= file->length) {
+        puts("start_index >= file->length");
+        return 7;
+    }
+
     char *ptr = file->ptr + start_index;
 
-    uint64_t lcfh_length = MoleReadU32LE(ptr + 18) // compressed data size
+    uint64_t comp_len = MoleReadU32LE(ptr + 18);
+    uint64_t lcfh_length = comp_len // compressed data size
                         +  MoleReadU16LE(ptr + 26) // file name length
                         +  MoleReadU16LE(ptr + 28) // extra field length
                         +  30; // the fields size up to file_name
 
     printf(
         "MoleHandlePKZIP_LCFH(%p [offset=%llu]):\n"
-        "\tlcfh_length= %llu\n\n"
+        "\tlcfh_length= %llu\n"
+        "\tuncomp_len= %llu\n\n"
         ,
         (void*)ptr, start_index,
-        lcfh_length
+        lcfh_length,
+        comp_len
     );
+
+    if ( (lcfh_length+start_index) > file->length ) {
+        fputs(
+            "[!] lcfh block length exceeds maximum file size. weird!\n",
+            stderr
+        );
+        return lcfh_length - comp_len;
+    }
 
     // not the first LCFH in the archive
     if (lcfh_start != NULL)
