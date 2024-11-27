@@ -25,9 +25,6 @@ int main(int argc, char **argv)
         file.buffer.length
     );
 
-    puts("press any key to read file.");
-    getchar();
-
     for(size_t b = 0; b < file.buffer.length; b++) {
         for(
             int h = 0;
@@ -52,14 +49,8 @@ no_match_for_magic:;
         }
     }
 
-    puts("press any key to close file.");
-    getchar();
-
     if (MoleFileClose(&file))
         return 3;
-
-    puts("press any key to exit.");
-    getchar();
 
     return 0;
 }
