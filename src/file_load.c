@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stddef.h>
+#include <string.h>
 
 #ifdef __WIN32
 #  include <windows.h>
@@ -47,16 +48,19 @@ int MoleFileLoad(MoleFileStream *f, const char *const path)
         return 3;
     }
 
-    if (sb.st_size > 1073741824) {
-        fputs("[E] MoleFileLoad: file too big. file size must not exceed 1GiB.\n", stderr);
+    if (sb.st_size > MOLE_FILESIZE_MAX) {
+        fputs(
+            "[E] MoleFileLoad: file too big. file size must not exceed 1GiB.\n",
+            stderr
+        );
         return 4;
     }
 
     f->buffer.length = sb.st_size;
-    f->buffer.ptr = mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, fd, 0);
+    f->buffer.ptr = mmap(NULL, sb.st_size, PROT_READ, MAP_SHARED, f->fd, 0);
 
     if (f->buffer.ptr == MAP_FAILED) {
-        close(fd);
+        close(f->fd);
 
         f->buffer.ptr = 0;
         f->buffer.length = 0;
@@ -85,8 +89,8 @@ int MoleFileLoad(MoleFileStream *f, const char *const path)
         return 3;
     }
 
-    if (tmp.QuadPart < 64 || tmp.QuadPart > 1073741824) {
-        fprintf(stderr, "[E] MoleFileLoad: Invalid file size = %llu\n", tmp.QuadPart);
+    if (tmp.QuadPart > MOLE_FILESIZE_MAX) {
+        fprintf(stderr, "[E] MoleFileLoad: Invalid file size = %zu\n", tmp.QuadPart);
         CloseHandle(f->hFile);
         return 4;
     }

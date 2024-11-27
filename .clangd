@@ -2,4 +2,3 @@ CompileFlags:
   Add:
     - "-xc"
     - "-std=c99"
-    - "-I../include"

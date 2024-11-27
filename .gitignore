@@ -5,5 +5,5 @@ mole
 *.exe
 *.zip
 *.pdf
-*.dmp
+*.DMP
 *.pdb

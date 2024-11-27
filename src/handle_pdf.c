@@ -1,13 +1,15 @@
 // C99
 #include "mole.h"
 
-#include <fileapi.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
+#include <stddef.h>
 #include <string.h>
-#include <windows.h>
-#include <winnt.h>
+
+#ifdef __WIN32
+#  include <fileapi.h>
+#  include <windows.h>
+#  include <winnt.h>
+#endif
 
 // the current occurrence of %PDF-
 // ptr points to '%' of the '%PDF-'
@@ -23,7 +25,7 @@ size_t MoleHandlePDF_Header(MoleSlice *file, size_t start_index)
          pdf_ver_minor = file->ptr[start_index + 7];
 
     printf(
-        "PDF %c.%c (offset= %llu)\n",
+        "PDF %c.%c (offset= %zu)\n",
         pdf_ver_major, pdf_ver_minor,
         start_index
     );
@@ -57,7 +59,7 @@ size_t MoleHandlePDF_Footer(MoleSlice *file, size_t start_index)
            pdf_len = 0;
 
     printf(
-        "EOF (offset= %llu)\n",
+        "EOF (offset= %zu)\n",
         start_index
     );
 
@@ -78,16 +80,17 @@ size_t MoleHandlePDF_Footer(MoleSlice *file, size_t start_index)
     char fname[16];
     memset(fname, 0, sizeof(fname));
     sprintf(
-        fname, "0x%llx-0x%llx.pdf",
+        fname, "0x%zx-0x%zx.pdf",
         pdf_start, pdf_end
     );
     printf(
-        "Writing file to disk (start= %llu, end=%llu)...\n",
+        "Writing file to disk (start= %zu, end=%zu)...\n",
         pdf_start, pdf_end
     );
 
 #ifdef __WIN32
-    // ! apparently using cstdlib's fwrite with a windows memory-mapped buffer
+    // ! apparently using cstdlib's fwrite
+    // ! with a windows memory-mapped buffer
     // ! does not work as intended.
     // ! this took so much of my time to figure out... i hate windows.
     WriteFile(

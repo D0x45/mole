@@ -17,7 +17,7 @@ int MoleFileClose(MoleFileStream *f)
         return 1;
     }
 #ifndef __WIN32
-    if (munmap(f->ptr, f->length) != 0) {
+    if (munmap(f->buffer.ptr, f->buffer.length) != 0) {
         fputs("[E] MoleFileClose: munmap failed.\n", stderr);
         return 2;
     }

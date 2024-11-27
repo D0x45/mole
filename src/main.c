@@ -20,7 +20,7 @@ int main(int argc, char **argv)
         return 2;
 
     printf(
-        "file.buffer { .ptr= 0x%p, .length= %llu }\n",
+        "file.buffer { .ptr= 0x%p, .length= %zu }\n",
         (void*)file.buffer.ptr,
         file.buffer.length
     );
@@ -40,9 +40,9 @@ int main(int argc, char **argv)
                     goto no_match_for_magic;
                 c++;
             }
-            printf("MATCH b=%llu, h= %d\n", b, h);
+            printf("MATCH b=%zu, h= %d\n", b, h);
             size_t skip_len = handlers[h].handle(&file.buffer, b);
-            printf("skip_len= %llu\n\n", skip_len);
+            printf("skip_len= %zu\n\n", skip_len);
             b += skip_len-1;
             if (b >= file.buffer.length) {
                 puts("[*] b >= file.buffer.length");

@@ -10,6 +10,10 @@
 #  include <windows.h>
 #endif
 
+#ifndef MOLE_FILESIZE_MAX
+#  define MOLE_FILESIZE_MAX (1073741824)
+#endif
+
 typedef struct {
     char *ptr;
     size_t length;

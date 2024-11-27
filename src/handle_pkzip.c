@@ -17,7 +17,6 @@
 
 #include <stddef.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
 
 // the first occurrence of LCFH before an EOCD
@@ -41,8 +40,8 @@ size_t MoleHandlePKZIP_EOCD(MoleSlice *file, size_t start_index)
     eocd_length = 22 + MoleReadU16LE(ptr + 20); // 22 + comment length
 
     printf(
-        "MoleHandlePKZIP_EOCD(%p [offset=%llu]):\n"
-        "\teocd_length= %llu\n"
+        "MoleHandlePKZIP_EOCD(%p [offset=%zu]):\n"
+        "\teocd_length= %zu\n"
         ,
         (void*)ptr, start_index,
         eocd_length
@@ -57,7 +56,7 @@ size_t MoleHandlePKZIP_EOCD(MoleSlice *file, size_t start_index)
     zip_length = (uint64_t)(zip_start_off + start_index + eocd_length + 1);
 
     printf(
-        "PKZip (size= %llu, start= %llu, end= %llu)\n",
+        "PKZip (size= %zu, start= %zu, end= %zu)\n",
         zip_length,
         zip_start_off,
         zip_start_off + zip_length - 1
@@ -66,7 +65,7 @@ size_t MoleHandlePKZIP_EOCD(MoleSlice *file, size_t start_index)
     char fname[16];
     memset(fname, 0, sizeof(fname));
     sprintf(
-        fname, "0x%llx-0x%llx.zip",
+        fname, "0x%zx-0x%zx.zip",
         zip_start_off,
         zip_start_off + zip_length - 1
     );
@@ -105,10 +104,10 @@ size_t MoleHandlePKZIP_LCFH(MoleSlice *file, size_t start_index)
                         +  30; // the fields size up to file_name
 
     printf(
-        "MoleHandlePKZIP_LCFH(%p [offset=%llu]):\n"
-        "\tlcfh_length= %llu\n"
+        "MoleHandlePKZIP_LCFH(%p [offset=%zu]):\n"
+        "\tlcfh_length= %zu\n"
         "\tfilename= %s\n"
-        "\tcomp_len= %llu\n\n"
+        "\tcomp_len= %zu\n\n"
         ,
         (void*)ptr, start_index,
         lcfh_length,
@@ -131,7 +130,7 @@ size_t MoleHandlePKZIP_LCFH(MoleSlice *file, size_t start_index)
     lcfh_start = ptr;
 
     printf(
-        "PKZip Start (start= %lld)\n",
+        "PKZip Start (start= %zu)\n",
         lcfh_start - file->ptr
     );
 
