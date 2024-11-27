@@ -107,10 +107,12 @@ size_t MoleHandlePKZIP_LCFH(MoleSlice *file, size_t start_index)
     printf(
         "MoleHandlePKZIP_LCFH(%p [offset=%llu]):\n"
         "\tlcfh_length= %llu\n"
-        "\tuncomp_len= %llu\n\n"
+        "\tfilename= %s\n"
+        "\tcomp_len= %llu\n\n"
         ,
         (void*)ptr, start_index,
         lcfh_length,
+        &ptr[30],
         comp_len
     );
 

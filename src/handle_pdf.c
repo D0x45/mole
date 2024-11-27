@@ -33,7 +33,7 @@ size_t MoleHandlePDF_Header(MoleSlice *file, size_t start_index)
         || (pdf_ver_minor < '0' || pdf_ver_minor > '9')
     ) {
         fputs("[!] invalid pdf version...\n", stderr);
-        return 0;
+        return 4;
     }
 
     if (pdf_header != NULL) {
@@ -43,7 +43,7 @@ size_t MoleHandlePDF_Header(MoleSlice *file, size_t start_index)
             "ignoring header...\n",
             stderr
         );
-        return 0;
+        return 7;
     }
 
     pdf_header = file->ptr + start_index;
@@ -68,7 +68,7 @@ size_t MoleHandlePDF_Footer(MoleSlice *file, size_t start_index)
             "ignoring header...\n",
             stderr
         );
-        return 0;
+        return 5;
     }
 
     pdf_start = (pdf_header - file->ptr);
